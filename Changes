@@ -1,5 +1,7 @@
 Revision history for Perl extension XML::OPML.
 
+0.1.7  Fri Feb 20 11:10:00 2004
+        - support for an unlimited number of embedded outlines is now possible and hopefully the POD is finally formatted the right way
 0.1.6  Thu Feb 19 13:37:00 2004
         - added support for one hierarchy of embedded outlines and reformated the POD
 0.1.5  Tue Feb 17 12:03:00 2004
