@@ -1,5 +1,7 @@
 Revision history for Perl extension XML::OPML.
 
+0.22   Sat Mar 06 08:24:00 2004
+        - fixed bug in Makefile
 0.21   Fri Mar 05 13:28:00 2004
         - managed to find the key to parsing OPML files successfully even with embedded outlines
         - XML::Simple requirement was removed

@@ -1,4 +1,4 @@
-# $Id: OPML.pm,v 0.21 2004/03/05 13:18:00 szul Exp $
+# $Id: OPML.pm,v 0.22 2004/03/05 13:18:00 szul Exp $
 package XML::OPML;
 
 use strict;
@@ -8,7 +8,7 @@ use XML::SimpleObject;
 use Fcntl qw(:DEFAULT :flock);
 use vars qw($VERSION $AUTOLOAD @ISA $modules $AUTO_ADD);
 
-$VERSION = '0.21';
+$VERSION = '0.22';
 
 $AUTO_ADD = 0;
 
