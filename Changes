@@ -1,5 +1,7 @@
 Revision history for Perl extension XML::OPML.
 
+0.25   Wed Mar 24 10:39:00 2004
+        - changed the development site to http://opml.blogenstein.com
 0.24   Mon Mar 15 10:38:00 2004
         - fixed bug regarding -e test on non-files
 0.23   Sat Mar 06 09:53:00 2004

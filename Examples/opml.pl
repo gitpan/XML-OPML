@@ -29,13 +29,13 @@ $opml->add_outline(
                    xmlurl => 'http://www.madghoul.com/cgi-bin/fearsome/fallout/index.rss10',
                   );
 $opml->add_outline(
-                   text => 'opml news from opml.madghoul.com',
+                   text => 'opml news from opml.blogenstein.com',
                    description => '',
-                   title => 'opml.madghoul.com',
+                   title => 'opml.blogenstein.com',
                    type => 'rss',
                    version => 'RSS',
-                   htmlurl => 'http://opml.madghoul.com',
-                   xmlurl => 'http://opml.madghoul.com/rdf.maker/index.rss',
+                   htmlurl => 'http://opml.blogenstein.com',
+                   xmlurl => 'http://opml.blogenstein.com/rdf.maker/index.rss',
                   );
 $opml->add_outline(
                    opmlvalue => 'embed',

@@ -15,7 +15,7 @@
 </head>
 <body>
 <outline description="Looking for something Strange?" htmlurl="http://www.madghoul.com/ghoul/InsaneRapture/lunacy.mhtml" text="madghoul.com | the dark night of the soul" title="madghoul.com | the dark night of the soul" type="rss" version="RSS" xmlurl="http://www.madghoul.com/cgi-bin/fearsome/fallout/index.rss10"  />
-<outline description="" htmlurl="http://opml.madghoul.com" text="opml news from opml.madghoul.com" title="opml.madghoul.com" type="rss" version="RSS" xmlurl="http://opml.madghoul.com/rdf.maker/index.rss"  />
+<outline description="" htmlurl="http://opml.blogenstein.com" text="opml news from opml.blogenstein.com" title="opml.madghoul.com" type="rss" version="RSS" xmlurl="http://opml.blogenstein.com/rdf.maker/index.rss"  />
 <outline text="Embedded" >
 <outline description="thankfully parsing works without having to many tricky things" text="Second Embedded outline for parsing opml content"  />
 <outline description="more outlines" htmlurl="no url" text="new additions to OPML" title="a blank title" type="rss" version="RSS" xmlurl="definitely no rss feed"  />

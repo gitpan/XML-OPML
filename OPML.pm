@@ -1,4 +1,4 @@
-# $Id: OPML.pm,v 0.24 2004/03/06 09:19:00 szul Exp $
+# $Id: OPML.pm,v 0.25 2004/03/06 09:19:00 szul Exp $
 package XML::OPML;
 
 use strict;
@@ -8,7 +8,7 @@ use XML::SimpleObject;
 use Fcntl qw(:DEFAULT :flock);
 use vars qw($VERSION $AUTOLOAD @ISA $modules $AUTO_ADD);
 
-$VERSION = '0.24';
+$VERSION = '0.25';
 
 $AUTO_ADD = 0;
 
@@ -673,7 +673,7 @@ Uses XML::Parser and XML::SimpleObject to parse the value of the string or file 
 
 =head1 SOURCE AVAILABILITY
 
-Source code is available at the development site at http://opml.madghoul.com. Any contributions or improvements are greatly appreciated. You may also want to visit http://www.madghoul.com to see a whole lot of perl coding at work.
+Source code is available at the development site at http://opml.blogenstein.com . Any contributions or improvements are greatly appreciated. You may also want to visit http://www.madghoul.com to see a whole lot of perl coding at work.
 
 =head1 AUTHOR
 
