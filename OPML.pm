@@ -1,4 +1,4 @@
-# $Id: OPML.pm,v 0.23 2004/03/06 09:19:00 szul Exp $
+# $Id: OPML.pm,v 0.24 2004/03/06 09:19:00 szul Exp $
 package XML::OPML;
 
 use strict;
@@ -8,7 +8,7 @@ use XML::SimpleObject;
 use Fcntl qw(:DEFAULT :flock);
 use vars qw($VERSION $AUTOLOAD @ISA $modules $AUTO_ADD);
 
-$VERSION = '0.23';
+$VERSION = '0.24';
 
 $AUTO_ADD = 0;
 
@@ -278,11 +278,15 @@ sub parse {
   $self->_initialize((%$self));
   @return_values = ();
   my $xmlobj;
-  if(-e $content) {
+  my $bool;
+  eval {
+    $bool = "true" if(-e $content);
+  };
+  if($bool) {
     my $parser = XML::Parser->new(ErrorContext => 2, Style => "Tree");
     $xmlobj = XML::SimpleObject->new($parser->parsefile($content));
-  }
-  else {
+   }
+   else {
     my $parser = XML::Parser->new(ErrorContext => 2, Style => "Tree");
     $xmlobj = XML::SimpleObject->new($parser->parse($content));
   }
@@ -478,14 +482,11 @@ my $entities = join('|', keys %entity);
 sub encode {
 	my ($self, $text) = @_;
 	return $text unless $self->{'encode_output'};
-	
 	my $encoded_text = '';
-	
 	while ( $text =~ s/(.*?)(\<\!\[CDATA\[.*?\]\]\>)//s ) {
 		$encoded_text .= encode_text($1) . $2;
 	}
 	$encoded_text .= encode_text($text);
-
 	return $encoded_text;
 }
 
@@ -494,7 +495,6 @@ sub encode_text {
     $text =~ s/&(?!(#[0-9]+|#x[0-9a-fA-F]+|\w+);)/&amp;/g;
     $text =~ s/&($entities);/$entity{$1}/g;
     $text =~ s/</&lt;/g;
-
     return $text;
 }
 1;
@@ -688,7 +688,9 @@ XML::OPML is free software. It may be redistributed and/or modified under the sa
 =head1 CREDITS
 
  michael szul <opml-dev@madghoul.com>
+ matt cashner <sungo@eekeek.org>
  ricardo signes <rjbs@cpan.org>
+ gergely nagy <algernon@bonehunter.rulez.org>
 
 =head1 SEE ALSO
 

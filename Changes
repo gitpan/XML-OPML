@@ -1,5 +1,7 @@
 Revision history for Perl extension XML::OPML.
 
+0.24   Mon Mar 15 10:38:00 2004
+        - fixed bug regarding -e test on non-files
 0.23   Sat Mar 06 09:53:00 2004
         - added examples to the tarball
         - added method insert_outline to modify outlines in any particular embedded group
@@ -23,7 +25,7 @@ Revision history for Perl extension XML::OPML.
         - removed parse and parsefile methods
         - abandoned hope of being able to update any OPML file due to the lack of a quality standard for OPML
 0.1.8  Wed Feb 25 11:45:00 2004
-        - support for attributes in ebedded outline tags in now possible and I really hope this is the last time I have to format the POD
+        - support for attributes in embedded outline tags in now possible and I really hope this is the last time I have to format the POD
 0.1.7  Fri Feb 20 11:10:00 2004
         - support for an unlimited number of embedded outlines is now possible and hopefully the POD is finally formatted the right way
 0.1.6  Thu Feb 19 13:37:00 2004
