@@ -1,5 +1,8 @@
 Revision history for Perl extension XML::OPML.
 
+0.26   Thu Mar 25 10:20:00 2004
+        - changed the development site email to opml-dev@blogenstein.com
+        - added keywords as an attribute
 0.25   Wed Mar 24 10:39:00 2004
         - changed the development site to http://opml.blogenstein.com
 0.24   Mon Mar 15 10:38:00 2004

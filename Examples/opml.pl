@@ -11,7 +11,7 @@ $opml->head(
              dateCreated => 'Sat 2004 02 14 09:22:00 GMT',
              dateModified => 'Sat 2004 02 14 09:22:00 GMT',
              ownerName => 'michael szul',
-             ownerEmail => 'michael@madghoul.com',
+             ownerEmail => 'opml-dev@blogenstein.com',
              expansionState => '',
              vertScrollState => '',
              windowTop => '',
@@ -35,7 +35,6 @@ $opml->add_outline(
                    type => 'rss',
                    version => 'RSS',
                    htmlurl => 'http://opml.blogenstein.com',
-                   xmlurl => 'http://opml.blogenstein.com/rdf.maker/index.rss',
                   );
 $opml->add_outline(
                    opmlvalue => 'embed',
