@@ -1,4 +1,4 @@
-# $Id: OPML.pm,v 0.1.4 2004/02/14 09:05:00 szul Exp $
+# $Id: OPML.pm,v 0.1.5 2004/02/14 09:05:00 szul Exp $
 package XML::OPML;
 
 use strict;
@@ -7,7 +7,7 @@ use XML::Parser;
 use Fcntl qw(:DEFAULT :flock);
 use vars qw($VERSION $AUTOLOAD @ISA $modules $AUTO_ADD);
 
-$VERSION = '0.1.4';
+$VERSION = '0.1.5';
 @ISA = qw(XML::Parser);
 
 $AUTO_ADD = 0;
@@ -386,9 +386,11 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
 
 =head1 SYNOPSIS
 
-### Create an OPML file
+# Create an OPML file
 use XML::OPML;
+
 my $opml = new XML::OPML(version => "1.1");
+
 $opml->head(
              title => 'mySubscription',
              dateCreated => 'Mon, 16 Feb 2004 11:35:00 GMT',
@@ -402,6 +404,7 @@ $opml->head(
              windowBottom => '',
              windowRight => '',
            );
+
 $opml->add_outline(
                  text => 'madghoul.com | the dark night of the soul',
                  description => 'Looking for something strange? Religion, philosophy, and occult science intermingle to form an amalgamation ripe for the counterculture - madghoul.com, keep your nightmares in order with the one site that keeps you up to date on the dark night of the soul.',
@@ -411,6 +414,7 @@ $opml->add_outline(
                  htmlUrl => 'http://www.madghoul.com/ghoul/InsaneRapture/lunacy.mhtml',
                  xmlUrl => 'http://www.madghoul.com/cgi-bin/fearsome/fallout/index.rss10',
                );
+
 $opml->add_outline(
                  text => 'raelity bytes',
                  descriptions => 'The raelity bytes weblog.',
@@ -421,20 +425,21 @@ $opml->add_outline(
                  xmlUrl => 'http://www.raelity.org/index.rss10',
                );
 
-### Save it as a string.
+# Save it as a string.
 $opml->as_string();
 
-### Save it to a file.
+# Save it to a file.
 $opml->save('mySubscriptions.opml');
 
-### Update the OPML file.
+# Update the OPML file.
 use XML::OPML;
+
 my $opml = new XML::OPML;
 
-### Update a file.
+# Update a file.
 $opml->parsefile('mySubscriptions.opml');
 
-### Update a string ($content is assumed to be an XML formated string).
+# Update a string ($content is assumed to be an XML formated string).
 $opml->parse($content);
 
 $opml->add_outline(
