@@ -1,7 +1,9 @@
 Revision history for Perl extension XML::OPML.
 
+0.1.6  Thu Feb 19 13:37:00 2004
+        - added support for one hierarchy of embedded outlines and reformated the POD
 0.1.5  Tue Feb 17 12:03:00 2004
-       - very, very minor change to fix POD
+        - very, very minor change to fix POD
 0.1.4  Tue Feb 17 11:56:02 2004
 	- original version; created by h2xs 1.22 with options
 		-X XML::OPML
