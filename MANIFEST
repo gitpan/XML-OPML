@@ -4,3 +4,6 @@ MANIFEST
 OPML.pm
 README
 t/1.t
+Examples/modules.opml
+Examples/mySubscriptions.opml
+Examples/opml.pl

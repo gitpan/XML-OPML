@@ -1,4 +1,4 @@
-# $Id: OPML.pm,v 0.22 2004/03/05 13:18:00 szul Exp $
+# $Id: OPML.pm,v 0.23 2004/03/06 09:19:00 szul Exp $
 package XML::OPML;
 
 use strict;
@@ -8,7 +8,7 @@ use XML::SimpleObject;
 use Fcntl qw(:DEFAULT :flock);
 use vars qw($VERSION $AUTOLOAD @ISA $modules $AUTO_ADD);
 
-$VERSION = '0.22';
+$VERSION = '0.23';
 
 $AUTO_ADD = 0;
 
@@ -84,12 +84,16 @@ sub _initialize {
 sub add_outline {
     my $self = shift;
     my $hash = {@_};
-
-    # add the outline to the list
     push (@{$self->{outline}}, $hash);
-
-    # return reference to the list of items
     return $self->{outline};
+}
+
+sub insert_outline {
+  my $self = shift;
+  my $hash = {@_};
+  $self->{group} = $hash->{group};
+  delete($hash->{group});
+  $self->{add_on} = $hash;
 }
 
 sub as_opml_1_1 {
@@ -104,9 +108,9 @@ sub as_opml_1_1 {
     # OPML root element
     $output .= '<opml version="1.1">'."\n";
 
-    ###################
+    ################
     # Head Element #
-    ###################
+    ################
     $output .= '<head>'."\n";
     $output .= '<title>'. $self->encode($self->{head}->{title}) .'</title>'."\n";
     $output .= '<dateCreated>'. $self->encode($self->{head}->{dateCreated}) .'</dateCreated>'."\n";
@@ -129,22 +133,29 @@ sub as_opml_1_1 {
     foreach my $outline (@{$self->{outline}}) {
             if(($outline->{opmlvalue}) && ($outline->{opmlvalue} eq "embed")) {
               my $embed_text = "";
+              $embed_text .= "dateAdded=\"$outline->{dateAdded}\" " if($outline->{dateAdded});
               $embed_text .= "date_added=\"$outline->{date_added}\" " if($outline->{date_added});
+              $embed_text .= "dateDownloaded=\"$outline->{dateDownloaded}\" " if($outline->{dateDownloaded});
               $embed_text .= "date_downloaded=\"$outline->{date_downloaded}\" " if($outline->{date_downloaded});
               $embed_text .= "description=\"$outline->{description}\" " if($outline->{description});
               $embed_text .= "email=\"$outline->{email}\" " if($outline->{email});
               $embed_text .= "filename=\"$outline->{filename}\" " if($outline->{filename});
+              $embed_text .= "htmlUrl=\"$outline->{htmlUrl}\" " if($outline->{htmlUrl});
               $embed_text .= "htmlurl=\"$outline->{htmlurl}\" " if($outline->{htmlurl});
               $embed_text .= "text=\"$outline->{text}\" " if($outline->{text});
               $embed_text .= "title=\"$outline->{title}\" " if($outline->{title});
               $embed_text .= "type=\"$outline->{type}\" " if($outline->{type});
               $embed_text .= "version=\"$outline->{version}\" " if($outline->{version});
+              $embed_text .= "xmlUrl=\"$outline->{xmlUrl}\" " if($outline->{xmlUrl});
               $embed_text .= "xmlurl=\"$outline->{xmlurl}\" " if($outline->{xmlurl});
               if($embed_text eq "") {
                 $output .= "<outline>\n";
               }
               else {
                 $output .= "<outline $embed_text>\n";
+                if(($self->{group}) && ($outline->{text} eq "$self->{group}")) {
+                  $outline->{time()} = $self->{add_on};
+                }
               }
               $output .= return_embedded($self, $outline);
               $output .= "</outline>\n";
@@ -163,7 +174,7 @@ sub as_opml_1_1 {
     return $output;
 }
 
-# Global array for capturin embedded outlines
+# Global array for capturing embedded outlines
 my @return_values = ();
 
 # Recurse down the outline elements to build proper tree structure
@@ -171,42 +182,53 @@ sub return_embedded {
   my ($self, $outline) = @_;
   foreach my $inner_out (keys %{$outline}) {
     next if($inner_out eq "opmlvalue");
+    next if($inner_out eq "dateAdded");
     next if($inner_out eq "date_added");
+    next if($inner_out eq "dateDownloaded");
     next if($inner_out eq "date_downloaded");
     next if($inner_out eq "description");
     next if($inner_out eq "email");
     next if($inner_out eq "filename");
+    next if($inner_out eq "htmlUrl");
     next if($inner_out eq "htmlurl");
     next if($inner_out eq "text");
     next if($inner_out eq "title");
     next if($inner_out eq "type");
     next if($inner_out eq "version");
+    next if($inner_out eq "xmlUrl");
     next if($inner_out eq "xmlurl");
     if(($outline->{$inner_out}->{'opmlvalue'}) && ($outline->{$inner_out}->{'opmlvalue'} eq "embed")) {
       my @elems = keys(%{$outline->{$inner_out}});
       my $pop_num = scalar(@elems);
       foreach my $elems (@elems) {
-        $pop_num-- if(($elems eq "opmlvalue") || ($elems eq "date_added") || ($elems eq "date_downloaded") || ($elems eq "description") || ($elems eq "email") || ($elems eq "filename") || ($elems eq "htmlurl") || ($elems eq "text") || ($elems eq "title") || ($elems eq "type") || ($elems eq "version") || ($elems eq "xmlurl"));
+        $pop_num-- if(($elems eq "opmlvalue") || ($elems eq "dateAdded") || ($elems eq "date_added") || ($elems eq "dateDownloaded") || ($elems eq "date_downloaded") || ($elems eq "description") || ($elems eq "email") || ($elems eq "filename") || ($elems eq "htmlUrl") || ($elems eq "htmlurl") || ($elems eq "text") || ($elems eq "title") || ($elems eq "type") || ($elems eq "version") || ($elems eq "xmlUrl") || ($elems eq "xmlurl"));
       }
       $pop_num = 1 if($pop_num == 0);
       my $return_output = "";
       my $embed_text = "";
+      $embed_text .= "dateAdded=\"$outline->{$inner_out}->{dateAdded}\" " if($outline->{$inner_out}->{dateAdded});
       $embed_text .= "date_added=\"$outline->{$inner_out}->{date_added}\" " if($outline->{$inner_out}->{date_added});
+      $embed_text .= "dateDownloaded=\"$outline->{$inner_out}->{dateDownloaded}\" " if($outline->{$inner_out}->{dateDownloaded});
       $embed_text .= "date_downloaded=\"$outline->{$inner_out}->{date_downloaded}\" " if($outline->{$inner_out}->{date_downloaded});
       $embed_text .= "description=\"$outline->{$inner_out}->{description}\" " if($outline->{$inner_out}->{description});
       $embed_text .= "email=\"$outline->{$inner_out}->{email}\" " if($outline->{$inner_out}->{email});
       $embed_text .= "filename=\"$outline->{$inner_out}->{filename}\" " if($outline->{$inner_out}->{filename});
+      $embed_text .= "htmlUrl=\"$outline->{$inner_out}->{htmlUrl}\" " if($outline->{$inner_out}->{hmtlUrl});
       $embed_text .= "htmlurl=\"$outline->{$inner_out}->{htmlurl}\" " if($outline->{$inner_out}->{htmlurl});
       $embed_text .= "text=\"$outline->{$inner_out}->{text}\" " if($outline->{$inner_out}->{text});
       $embed_text .= "title=\"$outline->{$inner_out}->{title}\" " if($outline->{$inner_out}->{title});
       $embed_text .= "type=\"$outline->{$inner_out}->{type}\" " if($outline->{$inner_out}->{type});
       $embed_text .= "version=\"$outline->{$inner_out}->{version}\" " if($outline->{$inner_out}->{version});
+      $embed_text .= "xmlUrl=\"$outline->{$inner_out}->{xmlUrl}\" " if($outline->{$inner_out}->{xmlUrl});
       $embed_text .= "xmlurl=\"$outline->{$inner_out}->{xmlurl}\" " if($outline->{$inner_out}->{xmlurl});
       if($embed_text eq "") {
         $return_output .= "<outline>\n";
       }
       else {
         $return_output .= "<outline $embed_text>\n";
+        if(($self->{group}) && ($outline->{$inner_out}->{text} eq "$self->{group}")) {
+          $outline->{$inner_out}->{time()} = $self->{add_on};
+        }
       }
       return_embedded($self, $outline->{$inner_out});
       while($pop_num > 0) {
@@ -243,7 +265,7 @@ sub save {
     my ($self,$file) = @_;
     open(OUT,">$file") || croak "Cannot open file $file for write: $!";
     flock(OUT, LOCK_EX);
-    print OUT $self->as_string;
+    print OUT $self->as_string();
     flock(OUT, LOCK_UN);
     close OUT;
 }
@@ -493,9 +515,9 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
  $opml->head(
              title => 'mySubscription',
              dateCreated => 'Mon, 16 Feb 2004 11:35:00 GMT',
-             dateModified => 'Mon, 16 Feb 2004 11:35:00 GMT',
+             dateModified => 'Sat, 05 Mar 2004 09:02:00 GMT',
              ownerName => 'michael szul',
-             ownerEmail => 'michael@madghoul.com',
+             ownerEmail => 'opml-dev@madghoul.com',
              expansionState => '',
              vertScrollState => '',
              windowTop => '',
@@ -510,8 +532,8 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
                  title => 'Warren Ellis Speaks Clever',
                  type => 'rss',
                  version => 'RSS',
-                 htmlurl => 'http://www.diepunyhumans.com ',
-                 xmlurl => 'http://www.diepunyhumans.com/index.rdf ',
+                 htmlUrl => 'http://www.diepunyhumans.com ',
+                 xmlUrl => 'http://www.diepunyhumans.com/index.rdf ',
                );
 
  $opml->add_outline(
@@ -520,8 +542,8 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
                  title => 'raelity bytes',
                  type => 'rss',
                  version => 'RSS',
-                 htmlurl => 'http://www.raelity.org ',
-                 xmlurl => 'http://www.raelity.org/index.rss10 ',
+                 htmlUrl => 'http://www.raelity.org ',
+                 xmlUrl => 'http://www.raelity.org/index.rss10 ',
                );
 
 # Create embedded outlines
@@ -582,7 +604,7 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
  my $content = $opml->as_string();
  $opml->parse($content);
 
-# Update it.
+# Update it appending to the end of the outline
 
  $opml->add_outline(
                     text => 'Neil Gaiman\'s Journal',
@@ -590,17 +612,30 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
                     title => 'Neil Gaiman\'s Journal',
                     type => 'rss',
                     version => 'RSS',
-                    htmlurl => 'http://www.neilgaiman.com/journal/journal.asp ',
-                    xmlurl => 'http://www.neilgaiman.com/journal/blogger_rss.xml ',
+                    htmlUrl => 'http://www.neilgaiman.com/journal/journal.asp ',
+                    xmlUrl => 'http://www.neilgaiman.com/journal/blogger_rss.xml ',
                   );
+
+# Update it inserting the outline into a specific group (note the group parameter)
+
+ $opml->insert_outline(
+                       group => 'occult',
+                       text => 'madghoul.com',
+                       description => 'the dark night of the soul',
+                       title => 'madghoul.com',
+                       type => 'rss',
+                       version => 'RSS',
+                       htmlUrl => 'http://www.madghoul.com ',
+                       xmlUrl => 'http://www.madghoul.com/cgi-bin/fearsome/fallout/index.rss10 ',
+                      );
 
 =head1 DESCRIPTION
 
-This experimental module is designed to allow for easy creation of OPML files. OPML files are most commonly used for the sharing of blogrolls or subscriptions - an outlined list of what other blogs an Internet blogger reads. RSS Feed Readers such as AmphetaDesk ( http://www.disobey.com/amphetadesk ) use *.opml files to store your subscription information for easy access.
+This experimental module is designed to allow for easy creation and manipulation of OPML files. OPML files are most commonly used for the sharing of blogrolls or subscriptions - an outlined list of what other blogs an Internet blogger reads. RSS Feed Readers such as AmphetaDesk ( http://www.disobey.com/amphetadesk ) use *.opml files to store your subscription information for easy access.
 
-This is purely experimental at this point and has a few limitations. This module may now support attributes in the <outline> element of an embedded hierarchy, but these are limited to the following attributes: date_added, date_downloaded, description, email, filename, htmlurl, text, title, type, version, and xmlurl. I'm currently looking into a way around this so that attributes can be anything.
+This is purely experimental at this point and has a few limitations. This module may now support attributes in the <outline> element of an embedded hierarchy, but these are limited to the following attributes: date_added, date_downloaded, description, email, filename, htmlurl, text, title, type, version, and xmlurl. Additionally, the following alternate spellings are also supported: dateAdded, dateDownloaded, htmlUrl, and xmlUrl.
 
-Rather than reinventing the wheel, this module was modified from the XML::RSS module, so functionality works in a similar way.
+Rather than reinvent the wheel, this module was modified from the XML::RSS module, so functionality works in a similar way.
 
 =head1 METHODS
 
@@ -616,7 +651,11 @@ This method will create all the OPML tags for the <head> subset. For more inform
 
 =item add_outline(opmlvalue => '$value', %attributes)
 
-This method adds the <outline> elements to the OPML document(see the example above). There are no statement requirements for the attributes in this tag. The ones shown in the example are the ones most commonly used by RSS Feed Readers, blogrolls, and subscriptions. The opmlvalue element is optional. Only use this with the value 'embed' if you wish to embed another outline within the current outline. You can now use attributes in <outline> tags that are used for embedded outlines, however, you cannot use any attribute you want. The embedded <outline> tag only supports the following: date_added, date_downloaded, description, email, filename, htmlurl, text, title, type, version, and xmlurl. I am looking into a way around this.
+This method adds the <outline> elements to the OPML document(see the example above). There are no statement requirements for the attributes in this tag. The ones shown in the example are the ones most commonly used by RSS Feed Readers, blogrolls, and subscriptions. The opmlvalue element is optional. Only use this with the value 'embed' if you wish to embed another outline within the current outline. You can now use attributes in <outline> tags that are used for embedded outlines, however, you cannot use any attribute you want. The embedded <outline> tag only supports the following: date_added, date_downloaded, description, email, filename, htmlurl, text, title, type, version, and xmlurl, as well as the alternate spellings: dateAdded, dateDownloaded, htmlUrl, and xmlUrl.
+
+=item insert_outline(group => '$group', %attributes)
+
+This method works in the same exact manner as add_outline() except that this will insert the outline element into the specified group. The $group variable must be the text presented in the "text" attribute of the outline that you wish to insert this one into. For example, if you have an outline element with the text attribute of "occult" that contains four outline subelements of occult web sites, your group parameter would be "occult."
 
 =item as_string()
 

@@ -1,5 +1,9 @@
 Revision history for Perl extension XML::OPML.
 
+0.23   Sat Mar 06 09:53:00 2004
+        - added examples to the tarball
+        - added method insert_outline to modify outlines in any particular embedded group
+        - added support for certain alternate spellings of attributes
 0.22   Sat Mar 06 08:24:00 2004
         - fixed bug in Makefile
 0.21   Fri Mar 05 13:28:00 2004
