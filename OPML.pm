@@ -1,4 +1,4 @@
-# $Id: OPML.pm,v 0.1.9 2004/02/14 09:05:00 szul Exp $
+# $Id: OPML.pm,v 0.20 2004/02/14 09:05:00 szul Exp $
 package XML::OPML;
 
 use strict;
@@ -7,7 +7,7 @@ use XML::Simple;
 use Fcntl qw(:DEFAULT :flock);
 use vars qw($VERSION $AUTOLOAD @ISA $modules $AUTO_ADD);
 
-$VERSION = '0.1.9';
+$VERSION = '0.20';
 #@ISA = qw(XML::Parser);
 
 $AUTO_ADD = 0;
@@ -57,10 +57,10 @@ sub _initialize {
     # internal hash
     $self->{_internal} = {};
 
-    # init num of items to 0
+    # initialize number of outlines to 0
     $self->{num_items} = 0;
 
-    # initialize items
+    # initialize outlines
     $self->{outline} = [];
 
     # encode output from as_string?
@@ -68,7 +68,7 @@ sub _initialize {
     ? ($self->{encode_output} = $hash{encode_output})
     : ($self->{encode_output} = 1);
 
-    #get version info
+    # get version information
     (exists($hash{version}))
     ? ($self->{version} = $hash{version})
     : ($self->{version} = '1.0');
@@ -83,7 +83,7 @@ sub _initialize {
     ? ($self->{encoding} = $hash{encoding})
     : ($self->{encoding} = 'UTF-8');
 
-    # opml version 1.1
+    # opml version 1.1 -- version 1.0 not supported
     if ($self->{version} eq '1.1') {
 	foreach my $i (qw(head body)) {
 	    my %template = %{$opml_fields{$i}};
@@ -110,9 +110,7 @@ sub as_opml_1_1 {
     # XML declaration
     $output .= '<?xml version="1.0" encoding="'.$self->{encoding}.'"?>'."\n";
 
-    # DOCTYPE
-#    $output .= '<!DOCTYPE rss PUBLIC "-//Netscape Communications//DTD RSS 0.91//EN"'."\n";
-#    $output .= '            "http://my.netscape.com/publish/formats/rss-0.91.dtd">'."\n\n";
+    # DOCTYPE: No official DocType for version 1.1
 
     # OPML root element
     $output .= '<opml version="1.1">'."\n";
@@ -135,13 +133,18 @@ sub as_opml_1_1 {
     $output .= '</head>' . "\n";
     $output .= '<body>' . "\n";
 
-    ################
+    ###################
     # outline element #
-    ################
+    ###################
+
     foreach my $outline (@{$self->{outline}}) {
             if(($outline->{opmlvalue}) && ($outline->{opmlvalue} eq "embed")) {
               my $embed_text = "";
+              $embed_text .= "date_added=\"$outline->{date_added}\" " if($outline->{date_added});
+              $embed_text .= "date_downloaded=\"$outline->{date_downloaded}\" " if($outline->{date_downloaded});
               $embed_text .= "description=\"$outline->{description}\" " if($outline->{description});
+              $embed_text .= "email=\"$outline->{email}\" " if($outline->{email});
+              $embed_text .= "filename=\"$outline->{filename}\" " if($outline->{filename});
               $embed_text .= "htmlurl=\"$outline->{htmlurl}\" " if($outline->{htmlurl});
               $embed_text .= "text=\"$outline->{text}\" " if($outline->{text});
               $embed_text .= "title=\"$outline->{title}\" " if($outline->{title});
@@ -171,13 +174,19 @@ sub as_opml_1_1 {
     return $output;
 }
 
+# Global array for capturin embedded outlines
 my @return_values = ();
 
+# Recurse down the outline elements to build proper tree structure
 sub return_embedded {
   my ($self, $outline) = @_;
   foreach my $inner_out (keys %{$outline}) {
     next if($inner_out eq "opmlvalue");
+    next if($inner_out eq "date_added");
+    next if($inner_out eq "date_downloaded");
     next if($inner_out eq "description");
+    next if($inner_out eq "email");
+    next if($inner_out eq "filename");
     next if($inner_out eq "htmlurl");
     next if($inner_out eq "text");
     next if($inner_out eq "title");
@@ -188,12 +197,16 @@ sub return_embedded {
       my @elems = keys(%{$outline->{$inner_out}});
       my $pop_num = scalar(@elems);
       foreach my $elems (@elems) {
-        $pop_num-- if(($elems eq "opmlvalue") || ($elems eq "description") || ($elems eq "htmlurl") || ($elems eq "text") || ($elems eq "title") || ($elems eq "type") || ($elems eq "version") || ($elems eq "xmlurl"));
+        $pop_num-- if(($elems eq "opmlvalue") || ($elems eq "date_added") || ($elems eq "date_downloaded") || ($elems eq "description") || ($elems eq "email") || ($elems eq "filename") || ($elems eq "htmlurl") || ($elems eq "text") || ($elems eq "title") || ($elems eq "type") || ($elems eq "version") || ($elems eq "xmlurl"));
       }
       $pop_num = 1 if($pop_num == 0);
       my $return_output = "";
       my $embed_text = "";
+      $embed_text .= "date_added=\"$outline->{$inner_out}->{date_added}\" " if($outline->{$inner_out}->{date_added});
+      $embed_text .= "date_downloaded=\"$outline->{$inner_out}->{date_downloaded}\" " if($outline->{$inner_out}->{date_downloaded});
       $embed_text .= "description=\"$outline->{$inner_out}->{description}\" " if($outline->{$inner_out}->{description});
+      $embed_text .= "email=\"$outline->{$inner_out}->{email}\" " if($outline->{$inner_out}->{email});
+      $embed_text .= "filename=\"$outline->{$inner_out}->{filename}\" " if($outline->{$inner_out}->{filename});
       $embed_text .= "htmlurl=\"$outline->{$inner_out}->{htmlurl}\" " if($outline->{$inner_out}->{htmlurl});
       $embed_text .= "text=\"$outline->{$inner_out}->{text}\" " if($outline->{$inner_out}->{text});
       $embed_text .= "title=\"$outline->{$inner_out}->{title}\" " if($outline->{$inner_out}->{title});
@@ -246,6 +259,7 @@ sub save {
     close OUT;
 }
 
+# Parser Blogroll with XML::Simple to prepare for additional blogs (outline elements)
 sub prepare_blogroll {
     my $self = shift;
     $self->_initialize((%$self));
@@ -264,7 +278,7 @@ sub prepare_blogroll {
     #$self->{body} = $xml_content->{body};
     $self->{outline} = $xml_content->{body}->{outline};
 }
-                                                                                
+
 sub strict {
     my ($self,$value) = @_;
     $self->{'strict'} = $value;
@@ -280,7 +294,7 @@ sub AUTOLOAD {
     croak "Unregistered entity: Can't access $name field in object of class $type"
 		unless (exists $self->{$name});
 
-    # return reference to RSS structure
+    # return reference to OPML structure
     if (@_ == 1) {
 	return $self->{$name}->{$_[0]} if defined $self->{$name}->{$_[0]};
 
@@ -298,20 +312,9 @@ sub AUTOLOAD {
 	return $self->{$name};
     }
     return 0;
-
-    # make sure we have all required elements
-	#foreach my $key (keys(%{$_REQ->{$name}})) {
-	    #my $element = $_REQ->{$name}->{$key};
-	    #croak "$key is required in $name"
-		#if ($element->[0] == 1) && (!defined($hash{$key}));
-	    #croak "$key cannot exceed ".$element->[1]." characters in length"
-		#unless length($hash{$key}) <= $element->[1];
-	#}
 }
 
-# the code here is a minorly tweaked version of code from
-# Matts' rssmirror.pl script
-#
+# Entities for encoding
 my %entity = (
 	      nbsp   => "&#160;",
 	      iexcl  => "&#161;",
@@ -466,13 +469,13 @@ XML::OPML - creates OPML (Outline Processor Markup Language) files and updates b
            );
 
  $opml->add_outline(
-                 text => 'madghoul.com | the dark night of the soul',
-                 description => 'madghoul.com, keep your nightmares in order',
-                 title => 'madghoul.com | the dark night of the soul',
+                 text => 'Warren Ellis Speaks Clever',
+                 description => 'Warren Ellis\' Personal Weblog',
+                 title => 'Warren Ellis Speaks Clever',
                  type => 'rss',
                  version => 'RSS',
-                 htmlurl => 'http://www.madghoul.com/ghoul/InsaneRapture/lunacy.mhtml',
-                 xmlurl => 'http://www.madghoul.com/cgi-bin/fearsome/fallout/index.rss10',
+                 htmlurl => 'http://www.diepunyhumans.com ',
+                 xmlurl => 'http://www.diepunyhumans.com/index.rdf ',
                );
 
  $opml->add_outline(
@@ -481,8 +484,8 @@ XML::OPML - creates OPML (Outline Processor Markup Language) files and updates b
                  title => 'raelity bytes',
                  type => 'rss',
                  version => 'RSS',
-                 htmlurl => 'http://www.raelity.org',
-                 xmlurl => 'http://www.raelity.org/index.rss10',
+                 htmlurl => 'http://www.raelity.org ',
+                 xmlurl => 'http://www.raelity.org/index.rss10 ',
                );
 
 # Create embedded outlines
@@ -544,17 +547,17 @@ XML::OPML - creates OPML (Outline Processor Markup Language) files and updates b
                     title => 'Neil Gaiman\'s Journal',
                     type => 'rss',
                     version => 'RSS',
-                    htmlurl => 'http://www.neilgaiman.com/journal/journal.asp',
-                    xmlurl => 'http://www.neilgaiman.com/journal/blogger_rss.xml',
+                    htmlurl => 'http://www.neilgaiman.com/journal/journal.asp ',
+                    xmlurl => 'http://www.neilgaiman.com/journal/blogger_rss.xml ',
                   );
 
 =head1 DESCRIPTION
 
-This experimental module is designed to allow for easy creation of OPML files. OPML files are most commonly used for the sharing of blogrolls or subscriptions - an outlined list of what other blogs an Internet blogger reads. RSS Feed Readers such as AmphetaDesk (http://www.disobey.com/amphetadesk) use *.opml files to store your subscription information for easy access.
+This experimental module is designed to allow for easy creation of OPML files. OPML files are most commonly used for the sharing of blogrolls or subscriptions - an outlined list of what other blogs an Internet blogger reads. RSS Feed Readers such as AmphetaDesk ( http://www.disobey.com/amphetadesk ) use *.opml files to store your subscription information for easy access.
 
 This is purely experimental at this point and has a few limitations.
 
-Additionally, this module, may now support attributes in the <outline> element of an embedded hierarchy, but these are limited to the following attributes: description, htmlurl, text, title, type, version, and xmlurl. I'm currently looking into a way around this so that attributes can be anything.
+Additionally, this module, may now support attributes in the <outline> element of an embedded hierarchy, but these are limited to the following attributes: date_added, date_downloaded, description, email, filename, htmlurl, text, title, type, version, and xmlurl. I'm currently looking into a way around this so that attributes can be anything.
 
 Rather than reinventing the wheel, this module was modified from the XML::RSS module, so functionality works in a similar way.
 
@@ -572,7 +575,7 @@ This method will create all the OPML tags for the <head> subset. For more inform
 
 =item add_outline(opmlvalue => '$value', %attributes)
 
-This method adds the <outline> elements to the OPML document(see the example above). There are no statement requirements for the attributes in this tag. The ones shown in the example are the ones most commonly used by RSS Feed Readers, blogrolls, and subscriptions. The opmlvalue element is optional. Only use this with the value 'embed' if you wish to embed another outline within the current outline. You can now use attributes in <outline> tags that are used for embedded outlines, however, you cannot use any attribute you want. The embedded <outline> tag only supports the following: description, htmlurl, text, title, type, version, and xmlurl. I am looking into a way around this.
+This method adds the <outline> elements to the OPML document(see the example above). There are no statement requirements for the attributes in this tag. The ones shown in the example are the ones most commonly used by RSS Feed Readers, blogrolls, and subscriptions. The opmlvalue element is optional. Only use this with the value 'embed' if you wish to embed another outline within the current outline. You can now use attributes in <outline> tags that are used for embedded outlines, however, you cannot use any attribute you want. The embedded <outline> tag only supports the following: date_added, date_downloaded, description, email, filename, htmlurl, text, title, type, version, and xmlurl. I am looking into a way around this.
 
 =item as_string()
 
@@ -590,7 +593,7 @@ Uses XML::Simple to parse the value of the string or file that is passed to it. 
 
 =head1 SOURCE AVAILABILITY
 
-Source code is available at the development site at http://opml.madghoul.com. Any contributions or improvements are greatly appreciated.
+Source code is available at the development site at http://opml.madghoul.com. Any contributions or improvements are greatly appreciated. You may also want to visit http://www.madghoul.com to see a whole lot of perl coding at work.
 
 =head1 AUTHOR
 
