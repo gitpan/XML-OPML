@@ -1,7 +1,11 @@
 Revision history for Perl extension XML::OPML.
 
+0.1.9  Thu Feb 26 14:56:00 2004
+        - added prepare_blogroll method as a new direction in updating OPML files specifically for blogrolls and subscriptions
+        - removed parse and parsefile methods
+        - abandoned hope of being able to update any OPML file due to the lack of a quality standard for OPML
 0.1.8  Wed Feb 25 11:45:00 2004
-        - support for attributes in ebedded outline tags in now possible and I really hope this is the last time I have to format the PO
+        - support for attributes in ebedded outline tags in now possible and I really hope this is the last time I have to format the POD
 0.1.7  Fri Feb 20 11:10:00 2004
         - support for an unlimited number of embedded outlines is now possible and hopefully the POD is finally formatted the right way
 0.1.6  Thu Feb 19 13:37:00 2004

@@ -1,14 +1,14 @@
-# $Id: OPML.pm,v 0.1.8 2004/02/14 09:05:00 szul Exp $
+# $Id: OPML.pm,v 0.1.9 2004/02/14 09:05:00 szul Exp $
 package XML::OPML;
 
 use strict;
 use Carp;
-use XML::Parser;
+use XML::Simple;
 use Fcntl qw(:DEFAULT :flock);
 use vars qw($VERSION $AUTOLOAD @ISA $modules $AUTO_ADD);
 
-$VERSION = '0.1.8';
-@ISA = qw(XML::Parser);
+$VERSION = '0.1.9';
+#@ISA = qw(XML::Parser);
 
 $AUTO_ADD = 0;
 
@@ -33,16 +33,17 @@ my %opml_fields = (
 
 sub new {
     my $class = shift;
-    my $self = $class->SUPER::new(
-    	Namespaces    => 1,
-		NoExpand      => 1,
-		ParseParamEnt => 0,
-		Handlers      => { 
-		#	Char    => \&handle_char,
-			XMLDecl => \&handle_dec,
-		#	Start   => \&handle_start
-			}
-                );
+    my $self = {};
+    #my $self = $class->SUPER::new(
+    #	Namespaces    => 1,
+    #		NoExpand      => 1,
+    #		ParseParamEnt => 0,
+    #		Handlers      => { 
+    #			Char    => \&handle_char,
+    #			XMLDecl => \&handle_dec,
+    #			Start   => \&handle_start
+    #			}
+    #            );
 			
     bless $self, $class;
     $self->_initialize(@_);
@@ -95,13 +96,8 @@ sub add_outline {
     my $self = shift;
     my $hash = {@_};
 
-
-    # add the item to the list
-    if (defined($hash->{mode}) && $hash->{mode} eq 'insert') {
-		unshift (@{$self->{outline}}, $hash);
-    } else {
-		push (@{$self->{outline}}, $hash);
-    }
+    # add the outline to the list
+    push (@{$self->{outline}}, $hash);
 
     # return reference to the list of items
     return $self->{outline};
@@ -176,6 +172,7 @@ sub as_opml_1_1 {
 }
 
 my @return_values = ();
+
 sub return_embedded {
   my ($self, $outline) = @_;
   foreach my $inner_out (keys %{$outline}) {
@@ -240,23 +237,6 @@ sub as_string {
     return $output;
 }
 
-#sub handle_char {
-	# removed assumption that RSS is the default namespace - kellan, 11/5/02
-
-#}
-
-sub handle_dec {
-    my ($self,$version,$encoding,$standalone) = (@_);
-    $self->{encoding} = $encoding;
-    #print "ENCODING: $encoding\n";
-}
-
-#sub handle_start {
-#    my $self = shift;
-#    my $el   = shift;
-#    my %attribs = @_;
-#}
-
 sub save {
     my ($self,$file) = @_;
     open(OUT,">$file") || croak "Cannot open file $file for write: $!";
@@ -266,22 +246,25 @@ sub save {
     close OUT;
 }
 
-sub parse {
+sub prepare_blogroll {
     my $self = shift;
     $self->_initialize((%$self));
-        $self->SUPER::parse(shift);
-    $self->_auto_add_modules if $AUTO_ADD;
+    my $parser = new XML::Simple;
+    my $xml_content = $parser->XMLin(shift);
     $self->{version} = $self->{_internal}->{version};
+    foreach my $head (keys %{$xml_content->{head}}) {
+      my $elem = $xml_content->{head}->{$head};
+      my @placeholder;
+      eval {
+        @placeholder = keys(%{$elem});
+        $xml_content->{head}->{$head} = "";
+      }
+    }
+    $self->{head} = $xml_content->{head};
+    #$self->{body} = $xml_content->{body};
+    $self->{outline} = $xml_content->{body}->{outline};
 }
                                                                                 
-sub parsefile {
-    my $self = shift;
-        $self->_initialize((%$self));
-    $self->SUPER::parsefile(shift);
-    $self->_auto_add_modules if $AUTO_ADD;
-    $self->{version} = $self->{_internal}->{version};
-}
-
 sub strict {
     my ($self,$value) = @_;
     $self->{'strict'} = $value;
@@ -458,7 +441,7 @@ __END__
 
 =head1 NAME
 
-XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
+XML::OPML - creates OPML (Outline Processor Markup Language) files and updates blogrolls
 
 =head1 SYNOPSIS
 
@@ -488,8 +471,8 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
                  title => 'madghoul.com | the dark night of the soul',
                  type => 'rss',
                  version => 'RSS',
-                 htmlUrl => 'http://www.madghoul.com/ghoul/InsaneRapture/lunacy.mhtml',
-                 xmlUrl => 'http://www.madghoul.com/cgi-bin/fearsome/fallout/index.rss10',
+                 htmlurl => 'http://www.madghoul.com/ghoul/InsaneRapture/lunacy.mhtml',
+                 xmlurl => 'http://www.madghoul.com/cgi-bin/fearsome/fallout/index.rss10',
                );
 
  $opml->add_outline(
@@ -498,8 +481,8 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
                  title => 'raelity bytes',
                  type => 'rss',
                  version => 'RSS',
-                 htmlUrl => 'http://www.raelity.org',
-                 xmlUrl => 'http://www.raelity.org/index.rss10',
+                 htmlurl => 'http://www.raelity.org',
+                 xmlurl => 'http://www.raelity.org/index.rss10',
                );
 
 # Create embedded outlines
@@ -545,7 +528,7 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
 
  $opml->save('mySubscriptions.opml');
 
-# Update the OPML file.
+# Update your blogroll.
 
  use XML::OPML;
 
@@ -553,11 +536,7 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
 
 # Update a file.
 
- $opml->parsefile('mySubscriptions.opml');
-
-# Update a string ($content is assumed to be an XML formated string).
-
- $opml->parse($content);
+ $opml->prepare_blogroll('mySubscriptions.opml');
 
  $opml->add_outline(
                     text => 'Neil Gaiman\'s Journal',
@@ -565,15 +544,15 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
                     title => 'Neil Gaiman\'s Journal',
                     type => 'rss',
                     version => 'RSS',
-                    htmlUrl => 'http://www.neilgaiman.com/journal/journal.asp',
-                    xmlUrl => 'http://www.neilgaiman.com/journal/blogger_rss.xml',
+                    htmlurl => 'http://www.neilgaiman.com/journal/journal.asp',
+                    xmlurl => 'http://www.neilgaiman.com/journal/blogger_rss.xml',
                   );
 
 =head1 DESCRIPTION
 
-This experimental module is designed to allow for easy creation and manipulation of OPML files. OPML files are most commonly used for the sharing of blogrolls or subscriptions - an outlined list of what other blogs an Internet blogger reads. RSS Feed Readers such as AmphetaDesk (http://www.disobey.com/amphetadesk) use *.opml files to store your subscription information for easy access.
+This experimental module is designed to allow for easy creation of OPML files. OPML files are most commonly used for the sharing of blogrolls or subscriptions - an outlined list of what other blogs an Internet blogger reads. RSS Feed Readers such as AmphetaDesk (http://www.disobey.com/amphetadesk) use *.opml files to store your subscription information for easy access.
 
-This is purely experimental at this point and has a few bugs and limitations. Most notably: the update feature seems to be wiping out previous outline items and only including the new ones.
+This is purely experimental at this point and has a few limitations.
 
 Additionally, this module, may now support attributes in the <outline> element of an embedded hierarchy, but these are limited to the following attributes: description, htmlurl, text, title, type, version, and xmlurl. I'm currently looking into a way around this so that attributes can be anything.
 
@@ -589,11 +568,11 @@ This is the constructor. It returns a reference to an XML::OPML object. This wil
 
 =item head(title => '$title', dateCreated => '$cdate', dateModified => '$mdate',ownerName => '$name', ownerEmail => '$email', expansionState => '$es', vertScrollState => '$vs', windowTop => '$wt', windowLeft => '$wl', windowBottom => '$wb',windowRight => '$wr',)
 
-This method with create all the OPML tags for the <head> subset. For more information on these tags, please see the OPML documentation at http://www.opml.org.
+This method will create all the OPML tags for the <head> subset. For more information on these tags, please see the OPML documentation at http://www.opml.org.
 
 =item add_outline(opmlvalue => '$value', %attributes)
 
-This method adds the <outline> elements to the OPML document(see the example above). There are no statement requirements for the attributes in this tag. The ones shown in the example are the ones most commonly used by RSS Feed Readers, blogrolls, and subscriptions. The opmlvalue element is optional. Only use this with the value 'embed' if you wish to embed another outline with the current outline.You can now use attributes in <outline> tags that are used for embedded outlines, however, you cannot use any attribute you want. The embedded <outline> tag only supports the following: description, htmlurl, text, title, type, version, and xmlurl. I am looking into a way around this.
+This method adds the <outline> elements to the OPML document(see the example above). There are no statement requirements for the attributes in this tag. The ones shown in the example are the ones most commonly used by RSS Feed Readers, blogrolls, and subscriptions. The opmlvalue element is optional. Only use this with the value 'embed' if you wish to embed another outline within the current outline. You can now use attributes in <outline> tags that are used for embedded outlines, however, you cannot use any attribute you want. The embedded <outline> tag only supports the following: description, htmlurl, text, title, type, version, and xmlurl. I am looking into a way around this.
 
 =item as_string()
 
@@ -603,13 +582,9 @@ Returns a string containing the OPML document.
 
 Saves the OPML document to $file
 
-=item parse($content)
+=item prepare_blogroll($content)
 
-Uses XML::Parser to parse the value of the string that is passed to it.
-
-=item parsefile($file)
-
-Uses XML::Parser to parse the contents of $file.
+Uses XML::Simple to parse the value of the string or file that is passed to it. This method prepares your blogroll for a possible update. Currently, only blogrolls without embedded outlines are supported.
 
 =back
 
@@ -634,7 +609,7 @@ XML::OPML is free software. It may be redistributed and/or modified under the sa
 
 =head1 SEE ALSO
 
-perl(1), XML::Parser(3), XML::RSS(3).
+perl(1), XML::Parser(3), XML::Simple(3), XML::RSS(3).
 
 =cut
 
