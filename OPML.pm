@@ -1,14 +1,14 @@
-# $Id: OPML.pm,v 0.20 2004/02/14 09:05:00 szul Exp $
+# $Id: OPML.pm,v 0.21 2004/03/05 13:18:00 szul Exp $
 package XML::OPML;
 
 use strict;
 use Carp;
-use XML::Simple;
+use XML::Parser;
+use XML::SimpleObject;
 use Fcntl qw(:DEFAULT :flock);
 use vars qw($VERSION $AUTOLOAD @ISA $modules $AUTO_ADD);
 
-$VERSION = '0.20';
-#@ISA = qw(XML::Parser);
+$VERSION = '0.21';
 
 $AUTO_ADD = 0;
 
@@ -34,17 +34,6 @@ my %opml_fields = (
 sub new {
     my $class = shift;
     my $self = {};
-    #my $self = $class->SUPER::new(
-    #	Namespaces    => 1,
-    #		NoExpand      => 1,
-    #		ParseParamEnt => 0,
-    #		Handlers      => { 
-    #			Char    => \&handle_char,
-    #			XMLDecl => \&handle_dec,
-    #			Start   => \&handle_start
-    #			}
-    #            );
-			
     bless $self, $class;
     $self->_initialize(@_);
     return $self;
@@ -259,24 +248,72 @@ sub save {
     close OUT;
 }
 
-# Parser Blogroll with XML::Simple to prepare for additional blogs (outline elements)
-sub prepare_blogroll {
-    my $self = shift;
-    $self->_initialize((%$self));
-    my $parser = new XML::Simple;
-    my $xml_content = $parser->XMLin(shift);
-    $self->{version} = $self->{_internal}->{version};
-    foreach my $head (keys %{$xml_content->{head}}) {
-      my $elem = $xml_content->{head}->{$head};
-      my @placeholder;
-      eval {
-        @placeholder = keys(%{$elem});
-        $xml_content->{head}->{$head} = "";
-      }
+# Parser the OPML with XML::Parser and XML::SimpleObject to add additional outlines.
+
+sub parse {
+  my $self = shift;
+  my $content = shift;
+  $self->_initialize((%$self));
+  @return_values = ();
+  my $xmlobj;
+  if(-e $content) {
+    my $parser = XML::Parser->new(ErrorContext => 2, Style => "Tree");
+    $xmlobj = XML::SimpleObject->new($parser->parsefile($content));
+  }
+  else {
+    my $parser = XML::Parser->new(ErrorContext => 2, Style => "Tree");
+    $xmlobj = XML::SimpleObject->new($parser->parse($content));
+  }
+  my $head = $xmlobj->child('opml')->child('head');
+  my @head_children = $head->children();
+  my $head_hash = {};
+  foreach my $head_child (@head_children) {
+    my $elem_value = $head_child->value() || "";
+    $head_hash->{$head_child->name()} = $elem_value;
+  }
+  my $body = $xmlobj->child('opml')->child('body');
+  my @outlines = $body->children('outline');
+  my $outline_list = [];
+  foreach my $outlines (@outlines) {
+    my $outline_holder = {};
+    my %atts = $outlines->attributes();
+    foreach my $atts (keys(%atts)) {
+      $outline_holder->{$atts} = $outlines->attribute($atts);
     }
-    $self->{head} = $xml_content->{head};
-    #$self->{body} = $xml_content->{body};
-    $self->{outline} = $xml_content->{body}->{outline};
+    unless($outlines->children()) {
+      push(@{$outline_list}, $outline_holder);
+    }
+    else {
+      my $new_hash = return_outlines($outline_holder, $outlines);
+      push(@{$outline_list}, $new_hash);
+    } 
+  }
+  $self->{head} = $head_hash;
+  $self->{outline} = $outline_list;
+}
+
+sub return_outlines {
+  my($outline_holder, $outlines) = @_;
+  $outline_holder->{'opmlvalue'} = 'embed';
+  my @outlines = $outlines->children('outline');
+  my $out_count = 0;
+  foreach my $outs (@outlines) {
+    $out_count++;
+    my $new_outline_holder = {};
+    my %atts = $outs->attributes();
+    foreach my $atts (keys(%atts)) {
+      $new_outline_holder->{$atts} = $outs->attribute($atts);
+    }
+    my $var_name = time() . $out_count;
+    unless($outs->children()) {
+      $outline_holder->{$var_name} = $new_outline_holder;
+    }
+    else {
+      my $new_hash = return_outlines($new_outline_holder, $outs);
+      $outline_holder->{$var_name} = $new_hash;
+    }
+  }
+  return $outline_holder;
 }
 
 sub strict {
@@ -431,20 +468,19 @@ sub encode {
 }
 
 sub encode_text {
-	my $text = shift;
-	
-	$text =~ s/&(?!(#[0-9]+|#x[0-9a-fA-F]+|\w+);)/&amp;/g;
+    my $text = shift;
+    $text =~ s/&(?!(#[0-9]+|#x[0-9a-fA-F]+|\w+);)/&amp;/g;
     $text =~ s/&($entities);/$entity{$1}/g;
     $text =~ s/</&lt;/g;
 
-	return $text;
+    return $text;
 }
 1;
 __END__
 
 =head1 NAME
 
-XML::OPML - creates OPML (Outline Processor Markup Language) files and updates blogrolls
+XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
 
 =head1 SYNOPSIS
 
@@ -531,15 +567,22 @@ XML::OPML - creates OPML (Outline Processor Markup Language) files and updates b
 
  $opml->save('mySubscriptions.opml');
 
-# Update your blogroll.
+# Update your OPML file.
 
  use XML::OPML;
 
  my $opml = new XML::OPML;
 
-# Update a file.
+# Parse the file.
 
- $opml->prepare_blogroll('mySubscriptions.opml');
+ $opml->parse('mySubscriptions.opml');
+
+# Or optionally from a variable.
+
+ my $content = $opml->as_string();
+ $opml->parse($content);
+
+# Update it.
 
  $opml->add_outline(
                     text => 'Neil Gaiman\'s Journal',
@@ -555,9 +598,7 @@ XML::OPML - creates OPML (Outline Processor Markup Language) files and updates b
 
 This experimental module is designed to allow for easy creation of OPML files. OPML files are most commonly used for the sharing of blogrolls or subscriptions - an outlined list of what other blogs an Internet blogger reads. RSS Feed Readers such as AmphetaDesk ( http://www.disobey.com/amphetadesk ) use *.opml files to store your subscription information for easy access.
 
-This is purely experimental at this point and has a few limitations.
-
-Additionally, this module, may now support attributes in the <outline> element of an embedded hierarchy, but these are limited to the following attributes: date_added, date_downloaded, description, email, filename, htmlurl, text, title, type, version, and xmlurl. I'm currently looking into a way around this so that attributes can be anything.
+This is purely experimental at this point and has a few limitations. This module may now support attributes in the <outline> element of an embedded hierarchy, but these are limited to the following attributes: date_added, date_downloaded, description, email, filename, htmlurl, text, title, type, version, and xmlurl. I'm currently looking into a way around this so that attributes can be anything.
 
 Rather than reinventing the wheel, this module was modified from the XML::RSS module, so functionality works in a similar way.
 
@@ -571,7 +612,7 @@ This is the constructor. It returns a reference to an XML::OPML object. This wil
 
 =item head(title => '$title', dateCreated => '$cdate', dateModified => '$mdate',ownerName => '$name', ownerEmail => '$email', expansionState => '$es', vertScrollState => '$vs', windowTop => '$wt', windowLeft => '$wl', windowBottom => '$wb',windowRight => '$wr',)
 
-This method will create all the OPML tags for the <head> subset. For more information on these tags, please see the OPML documentation at http://www.opml.org.
+This method will create all the OPML tags for the <head> subset. For more information on these tags, please see the OPML documentation at http://www.opml.org .
 
 =item add_outline(opmlvalue => '$value', %attributes)
 
@@ -585,9 +626,9 @@ Returns a string containing the OPML document.
 
 Saves the OPML document to $file
 
-=item prepare_blogroll($content)
+=item parse($content)
 
-Uses XML::Simple to parse the value of the string or file that is passed to it. This method prepares your blogroll for a possible update. Currently, only blogrolls without embedded outlines are supported.
+Uses XML::Parser and XML::SimpleObject to parse the value of the string or file that is passed to it. This method prepares your OPML file for a possible update. Embedded outlines are supported.
 
 =back
 
@@ -612,7 +653,7 @@ XML::OPML is free software. It may be redistributed and/or modified under the sa
 
 =head1 SEE ALSO
 
-perl(1), XML::Parser(3), XML::Simple(3), XML::RSS(3).
+perl(1), XML::Parser(3), XML::SimpleObject(3), XML::RSS(3).
 
 =cut
 
