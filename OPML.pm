@@ -1,4 +1,4 @@
-# $Id: OPML.pm,v 0.1.7 2004/02/14 09:05:00 szul Exp $
+# $Id: OPML.pm,v 0.1.8 2004/02/14 09:05:00 szul Exp $
 package XML::OPML;
 
 use strict;
@@ -7,7 +7,7 @@ use XML::Parser;
 use Fcntl qw(:DEFAULT :flock);
 use vars qw($VERSION $AUTOLOAD @ISA $modules $AUTO_ADD);
 
-$VERSION = '0.1.7';
+$VERSION = '0.1.8';
 @ISA = qw(XML::Parser);
 
 $AUTO_ADD = 0;
@@ -144,10 +144,23 @@ sub as_opml_1_1 {
     ################
     foreach my $outline (@{$self->{outline}}) {
             if(($outline->{opmlvalue}) && ($outline->{opmlvalue} eq "embed")) {
-            $output .= "<outline>\n";
-            $output .= return_embedded($self, $outline);
-            $output .= "</outline>\n";
-            next;
+              my $embed_text = "";
+              $embed_text .= "description=\"$outline->{description}\" " if($outline->{description});
+              $embed_text .= "htmlurl=\"$outline->{htmlurl}\" " if($outline->{htmlurl});
+              $embed_text .= "text=\"$outline->{text}\" " if($outline->{text});
+              $embed_text .= "title=\"$outline->{title}\" " if($outline->{title});
+              $embed_text .= "type=\"$outline->{type}\" " if($outline->{type});
+              $embed_text .= "version=\"$outline->{version}\" " if($outline->{version});
+              $embed_text .= "xmlurl=\"$outline->{xmlurl}\" " if($outline->{xmlurl});
+              if($embed_text eq "") {
+                $output .= "<outline>\n";
+              }
+              else {
+                $output .= "<outline $embed_text>\n";
+              }
+              $output .= return_embedded($self, $outline);
+              $output .= "</outline>\n";
+              next;
             }
 	    $output .= "<outline ";
           foreach my $atts (sort {$a cmp $b} keys %{$outline}) {
@@ -167,13 +180,35 @@ sub return_embedded {
   my ($self, $outline) = @_;
   foreach my $inner_out (keys %{$outline}) {
     next if($inner_out eq "opmlvalue");
+    next if($inner_out eq "description");
+    next if($inner_out eq "htmlurl");
+    next if($inner_out eq "text");
+    next if($inner_out eq "title");
+    next if($inner_out eq "type");
+    next if($inner_out eq "version");
+    next if($inner_out eq "xmlurl");
     if(($outline->{$inner_out}->{'opmlvalue'}) && ($outline->{$inner_out}->{'opmlvalue'} eq "embed")) {
       my @elems = keys(%{$outline->{$inner_out}});
       my $pop_num = scalar(@elems);
-      $pop_num-- if($elems[0] eq "opmlvalue");
+      foreach my $elems (@elems) {
+        $pop_num-- if(($elems eq "opmlvalue") || ($elems eq "description") || ($elems eq "htmlurl") || ($elems eq "text") || ($elems eq "title") || ($elems eq "type") || ($elems eq "version") || ($elems eq "xmlurl"));
+      }
       $pop_num = 1 if($pop_num == 0);
       my $return_output = "";
-      $return_output .= "<outline>\n";
+      my $embed_text = "";
+      $embed_text .= "description=\"$outline->{$inner_out}->{description}\" " if($outline->{$inner_out}->{description});
+      $embed_text .= "htmlurl=\"$outline->{$inner_out}->{htmlurl}\" " if($outline->{$inner_out}->{htmlurl});
+      $embed_text .= "text=\"$outline->{$inner_out}->{text}\" " if($outline->{$inner_out}->{text});
+      $embed_text .= "title=\"$outline->{$inner_out}->{title}\" " if($outline->{$inner_out}->{title});
+      $embed_text .= "type=\"$outline->{$inner_out}->{type}\" " if($outline->{$inner_out}->{type});
+      $embed_text .= "version=\"$outline->{$inner_out}->{version}\" " if($outline->{$inner_out}->{version});
+      $embed_text .= "xmlurl=\"$outline->{$inner_out}->{xmlurl}\" " if($outline->{$inner_out}->{xmlurl});
+      if($embed_text eq "") {
+        $return_output .= "<outline>\n";
+      }
+      else {
+        $return_output .= "<outline $embed_text>\n";
+      }
       return_embedded($self, $outline->{$inner_out});
       while($pop_num > 0) {
       	$return_output .= pop(@return_values);
@@ -449,7 +484,7 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
 
  $opml->add_outline(
                  text => 'madghoul.com | the dark night of the soul',
-                 description => 'madghoul.com, keep your nightmares in order with the one site that keeps you up to date on the dark night of the soul.',
+                 description => 'madghoul.com, keep your nightmares in order',
                  title => 'madghoul.com | the dark night of the soul',
                  type => 'rss',
                  version => 'RSS',
@@ -482,12 +517,24 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
                      outline_three => {
                                         opmlvalue => 'embed',
                                         em_outline_one => {
-                                                            text => 'I'm too lazy to come up with real examples of outlines',
+                                                            text => 'I'm too lazy to come up with real examples',
                                                           },
                                         em_outline_two => {
                                                             text => 'so you get generic text',
                                                           },
                                       },
+                   );
+
+# Create an embedded outline with attributes in the encasing <outline> tag
+
+ $opml->add_outline(
+                     opmlvalue => 'embed',
+                     description => 'now we can have attributes in this tag',
+                     title => 'attributes',
+                     outline_with_atts => {
+                                            text => 'Eat Your Wheaties',
+                                            description => 'Cereal is the breakfast of champion programmers',
+                                          },
                    );
 
 # Save it as a string.
@@ -524,11 +571,11 @@ XML::OPML - creates and updates OPML (Outline Processor Markup Language) files
 
 =head1 DESCRIPTION
 
-This experimental module is designed to allow for easy creation and manipulation of OPML files. OPML files are most commonly used for the sharing of blogrolls or subscriptions - an outlined list of what other blogs and Internet blogger reads. RSS Feed Readers such as AmphetaDesk (http://www.disobey.com/amphetadesk) use *.opml files to store your subscription information for easy access.
+This experimental module is designed to allow for easy creation and manipulation of OPML files. OPML files are most commonly used for the sharing of blogrolls or subscriptions - an outlined list of what other blogs an Internet blogger reads. RSS Feed Readers such as AmphetaDesk (http://www.disobey.com/amphetadesk) use *.opml files to store your subscription information for easy access.
 
 This is purely experimental at this point and has a few bugs and limitations. Most notably: the update feature seems to be wiping out previous outline items and only including the new ones.
 
-Additionally, this module, may now support embedded outlines (i.e., outline tags inside of outline tags), but you currently cannot add attributes to the <outline> element of an embedded hierarchy.
+Additionally, this module, may now support attributes in the <outline> element of an embedded hierarchy, but these are limited to the following attributes: description, htmlurl, text, title, type, version, and xmlurl. I'm currently looking into a way around this so that attributes can be anything.
 
 Rather than reinventing the wheel, this module was modified from the XML::RSS module, so functionality works in a similar way.
 
@@ -544,11 +591,11 @@ This is the constructor. It returns a reference to an XML::OPML object. This wil
 
 This method with create all the OPML tags for the <head> subset. For more information on these tags, please see the OPML documentation at http://www.opml.org.
 
-=item add_item(opmlvalue => '$value', %attributes)
+=item add_outline(opmlvalue => '$value', %attributes)
 
-This method adds the <outline> elements to the OPML document(see the example above). There are no statement requirements for the attributes in this tag. The ones shown in the example are the ones most commonly used by RSS Feed Readers, blogrolls, and subscriptions. The opmlvalue element is optional. Only use this with the value 'embed' if you wish to embed another outline with the current outline.
+This method adds the <outline> elements to the OPML document(see the example above). There are no statement requirements for the attributes in this tag. The ones shown in the example are the ones most commonly used by RSS Feed Readers, blogrolls, and subscriptions. The opmlvalue element is optional. Only use this with the value 'embed' if you wish to embed another outline with the current outline.You can now use attributes in <outline> tags that are used for embedded outlines, however, you cannot use any attribute you want. The embedded <outline> tag only supports the following: description, htmlurl, text, title, type, version, and xmlurl. I am looking into a way around this.
 
-=item as_string
+=item as_string()
 
 Returns a string containing the OPML document.
 
@@ -568,7 +615,7 @@ Uses XML::Parser to parse the contents of $file.
 
 =head1 SOURCE AVAILABILITY
 
- Source code is available at the development site at http://opml.madghoul.com. Any contributions or improvements are greatly appreciated.
+Source code is available at the development site at http://opml.madghoul.com. Any contributions or improvements are greatly appreciated.
 
 =head1 AUTHOR
 
